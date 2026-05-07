@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>IoT Monitoring Dashboard - UKK SMK</title>
+  <meta name="description" content="Dashboard monitoring IoT real-time menggunakan ESP32, DHT11, dan LDR via MQTT"/>
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css"/>
+
+  <!-- Libraries -->
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <!-- Notifikasi Suhu Tinggi -->
+  <div class="notif" id="notif">
+    🔥 <span id="notif-txt">Suhu melebihi 30°C!</span>
+  </div>
+
+  <!-- ===== HEADER ===== -->
+  <header class="hdr">
+    <div class="hdr-l">
+      <div class="logo">📡</div>
+      <div>
+        <h1>IoT Monitoring Dashboard</h1>
+        <p>ESP32 + DHT11 + LDR — UKK SMK IoT</p>
+      </div>
+    </div>
+    <div class="sbadge disc" id="sbadge">
+      <div class="dot"></div>
+      <span id="stxt">Disconnected</span>
+    </div>
+  </header>
+
+  <main class="wrap">
+
+
+
+    <!-- ===== SENSOR CARDS ===== -->
+    <section class="grid3">
+
+      <!-- Suhu -->
+      <div class="card temp">
+        <div class="card-ico">🌡️</div>
+        <div class="card-lbl">Suhu</div>
+        <div class="card-val g" id="csuhu">
+          --<span class="card-unit">°C</span>
+        </div>
+        <div class="tag g" id="tsuhu">Menunggu...</div>
+        <div class="upd"  id="usuhu">Belum ada data</div>
+      </div>
+
+      <!-- Kelembaban -->
+      <div class="card humi">
+        <div class="card-ico">💧</div>
+        <div class="card-lbl">Kelembaban</div>
+        <div class="card-val b" id="chumi">
+          --<span class="card-unit">%</span>
+        </div>
+        <div class="tag b" id="thumi">Menunggu...</div>
+        <div class="upd"  id="uhumi">Belum ada data</div>
+      </div>
+
+      <!-- LDR -->
+      <div class="card ldr">
+        <div class="card-ico">💡</div>
+        <div class="card-lbl">Cahaya (LDR)</div>
+        <div class="card-val w" id="cldr">--</div>
+        <div class="tag y"  id="tldr">Menunggu...</div>
+        <div class="upd"   id="uldr">Belum ada data</div>
+      </div>
+
+      <!-- Mode Operasi -->
+      <div class="card mode-c">
+        <div class="card-ico">⚙️</div>
+        <div class="card-lbl">Mode Operasi</div>
+        <div class="card-val g" id="cmode" style="font-size:2rem">--</div>
+        <div class="mode-btn-wrap">
+          <button class="mbtn auto active" id="mbtn-auto"
+                  onclick="setMode('AUTO')"   disabled>AUTO</button>
+          <button class="mbtn manual"      id="mbtn-man"
+                  onclick="setMode('MANUAL')" disabled>MANUAL</button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ===== RELAY PANEL ===== -->
+    <section class="relay-section">
+      <div class="relay-section-hdr">
+        <div class="relay-section-title">🔌 Status &amp; Kontrol Relay</div>
+        <span class="relay-hint">Tombol aktif hanya saat Mode MANUAL</span>
+      </div>
+      <div class="relay-grid">
+
+        <div class="relay-card off" id="rc1">
+          <div class="relay-name">RELAY 1 — LED 1</div>
+          <div class="relay-status off" id="rs1">OFF</div>
+          <button class="btn-toggle btn-on" id="rb1"
+                  onclick="setRelay(1)" disabled>Nyalakan</button>
+        </div>
+
+        <div class="relay-card off" id="rc2">
+          <div class="relay-name">RELAY 2 — LED 2</div>
+          <div class="relay-status off" id="rs2">OFF</div>
+          <button class="btn-toggle btn-on" id="rb2"
+                  onclick="setRelay(2)" disabled>Nyalakan</button>
+        </div>
+
+        <div class="relay-card off" id="rc3">
+          <div class="relay-name">RELAY 3 — LED 3</div>
+          <div class="relay-status off" id="rs3">OFF</div>
+          <button class="btn-toggle btn-on" id="rb3"
+                  onclick="setRelay(3)" disabled>Nyalakan</button>
+        </div>
+
+        <div class="relay-card off" id="rc4">
+          <div class="relay-name">RELAY 4 — LED 4</div>
+          <div class="relay-status off" id="rs4">OFF</div>
+          <button class="btn-toggle btn-on" id="rb4"
+                  onclick="setRelay(4)" disabled>Nyalakan</button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ===== CHARTS ===== -->
+    <div class="grid2">
+      <div class="chart-card">
+        <div class="chart-title">📈 Grafik Suhu (°C)</div>
+        <div class="ch-wrap"><canvas id="ch-s"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">📊 Grafik Kelembaban (%)</div>
+        <div class="ch-wrap"><canvas id="ch-h"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ===== HISTORY TABLE ===== -->
+    <div class="hist-card">
+      <div class="hist-hdr">
+        <div class="hist-title">📋 Riwayat Data Sensor</div>
+        <button class="btn-clr" onclick="clearAll()">🗑 Hapus Semua</button>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Waktu</th>
+              <th>Suhu</th>
+              <th>Kelembaban</th>
+              <th>LDR</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="tbody">
+            <tr><td colspan="6" class="no-data">Belum ada data. Menghubungkan ke MQTT...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- JavaScript -->
+  <script src="app.js"></script>
+
+</body>
+</html>
