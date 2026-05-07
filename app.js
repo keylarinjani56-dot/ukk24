@@ -36,7 +36,7 @@ let mqttClient  = null;
 let rows        = [];
 let rowCount    = 0;
 const MAX_ROWS  = 80;
-const MAX_CHART = 20;
+const MAX_CHART = 30;   // diperbesar karena data datang lebih cepat (500ms)
 const relayState = { 1: false, 2: false, 3: false, 4: false };
 
 // ─── CHART DATA ───────────────────────────────────────────────
@@ -65,7 +65,7 @@ function makeChart(canvasId, label, dataArr, color) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      animation: { duration: 400 },
+      animation: { duration: 200 },   // dipercepat dari 400ms → 200ms agar tidak lag
       plugins: { legend: { display: false } },
       scales: {
         x: { ticks: { color: '#6b7280', maxTicksLimit: 6, font: { size: 10 } }, grid: { color: '#1f2937' } },
